@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UniRx;
+using UnityEngine.UI;
 
 enum WallType
 {
@@ -9,7 +10,7 @@ enum WallType
     Wall,
     Ceiling
 }
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, Damageable
 {
     enum States
     {
@@ -18,7 +19,6 @@ public class Player : MonoBehaviour
         Jump,
     }
 
-    [SerializeField] float walkSpeed;
     Rigidbody2D rigidbody;
     float defaultGrabvityScale;
     States state;
@@ -28,6 +28,8 @@ public class Player : MonoBehaviour
         get { return inputProvider.StickDirection; }
     }
 
+    Vector2 defaultStickDirection { get { return Vector2.up; } }
+
     // ジャンプ
     bool isJumping;
     public Vector2 jumpDirection { get; private set; }
@@ -35,16 +37,24 @@ public class Player : MonoBehaviour
     float jumpTime;
     bool isJumpArmer;
 
+
     [SerializeField] PlayerJumpGuide jumpGuide;
     [SerializeField] float jumpPower;
     [SerializeField] float jumpingGravityScale;
     [SerializeField] float guideMoveSpeed;
     [SerializeField] float jumpStopMagnitude = 8;
+    [SerializeField] float maxJumpDuration = 0.5f;
+    [SerializeField] float gravityMultiplier = 1.5f;
 
-    // 攻撃判定
+    // 攻撃
     Vector2 oldVelocity;
     CameraMover cameraMover;
+    Vector2[] checkReleaseWallArray;
 
+    // カメラ
+    [SerializeField] float shakeDur = 0.5f;
+    [SerializeField] float shakeStrength = 0.5f;
+    [SerializeField] int shakeVibrato = 10;
 
     // 接触判定
     [SerializeField] PlayerCollider playerCollider;
@@ -52,6 +62,10 @@ public class Player : MonoBehaviour
     // 入力
     [SerializeField] PlayerInputProvider inputProvider;
 
+    // 移動
+    Vector2 currentMoveVec;
+    [SerializeField] float walkSpeed;
+    [SerializeField] float walkSpeedWhileJumping;
 
     Collider2D BodyCollider
     {
@@ -61,9 +75,16 @@ public class Player : MonoBehaviour
     void Awake()
     {
         rigidbody = GetComponent<Rigidbody2D>();
-        defaultGrabvityScale = rigidbody.gravityScale;
+        defaultGrabvityScale = gravityMultiplier * rigidbody.gravityScale;
         inputProvider = GetComponent<PlayerInputProvider>();
-        cameraMover = GameObject.Find("Main Camera").GetComponent<CameraMover>();
+        cameraMover = ObjectFinder.GetCameraMover();
+
+        checkReleaseWallArray = new Vector2[]{
+            Vector2.left,
+            Vector2.right,
+            Vector2.up,
+            Vector2.down
+        };
     }
 
     private void Start()
@@ -72,10 +93,49 @@ public class Player : MonoBehaviour
         {
             OnHitOtherPlayer(other);
         });
+
+        playerCollider.OnStayWall.Subscribe(col =>
+        {
+            OnStayWall(col);
+        });
+
+        playerCollider.OnHitDamageable.Subscribe(damageable =>
+        {
+            OnHitDamageable(damageable);
+        });
     }
 
-    [SerializeField] float shakeDur = 0.5f;
-    [SerializeField] float shakeStrength = 0.5f;
+
+    void Update()
+    {
+        if (playerCollider.IsHoldingAnything)
+        {
+        }
+
+        if (state == States.ReadyToJump)
+        {
+            DrawGuideLine();
+        }
+        else
+        {
+            HideGuideLine();
+        }
+
+        Move();
+        ManageJump();
+        ManageGravity();
+
+
+
+        oldVelocity = rigidbody.velocity;
+    }
+
+
+    void OnStayWall(Collision2D col)
+    {
+        Vector2 v = col.GetContact(0).normal;
+        currentMoveVec = Quaternion.Euler(0, 0, -90) * v;
+    }
 
     void OnHitOtherPlayer(Player other)
     {
@@ -100,9 +160,17 @@ public class Player : MonoBehaviour
                 enemy.NockBack(hitVec * oldVelocity.magnitude);
                 //    Destroy(collision.gameObject);
                 rigidbody.velocity = oldVelocity;
-                cameraMover.Shake(shakeStrength, shakeDur);
                 IgnorePlayerTemporarily(enemy);
             }
+        }
+    }
+
+    void OnHitDamageable(Damageable damageable)
+    {
+        if (isJumping)
+        {
+            cameraMover.Shake(shakeStrength, shakeDur, shakeVibrato);
+            damageable.Damage(1);
         }
     }
 
@@ -116,92 +184,42 @@ public class Player : MonoBehaviour
             case States.ReadyToJump:
                 break;
             case States.Jump:
-        rigidbody.AddForce(vec);
+                rigidbody.AddForce(vec);
                 break;
             default:
                 break;
         }
     }
 
+
     void ReleaseWall()
     {
         Collider2D[] results = new Collider2D[3];
         Vector2 releaseDir = Vector2.zero;
 
-        Physics2D.OverlapPointNonAlloc((Vector2)transform.position + Vector2.left * 1, results);
 
-        foreach(Collider2D col in results)
+
+        for (int i = 0; i < 4; i++)
         {
-            if(col ==null)
-            {
-                continue;
-            }
+            Physics2D.OverlapPointNonAlloc((Vector2)transform.position + checkReleaseWallArray[i] * 1, results);
 
-            if(col.gameObject.CompareTag("Wall"))
+            foreach (Collider2D col in results)
             {
-        Debug.Log("Detect left");
-                releaseDir += Vector2.right * 1;
+                if (col == null)
+                {
+                    continue;
+                }
+
+                if (col.gameObject.CompareTag("Wall"))
+                {
+                    releaseDir += checkReleaseWallArray[i] * -1;
+                    Debug.Log(releaseDir);
+                }
             }
+            results[0] = null;
+            results[1] = null;
+            results[2] = null;
         }
-        results[0] = null;
-        results[1] = null;
-        results[2] = null;
-
-        Physics2D.OverlapPointNonAlloc((Vector2)transform.position + Vector2.right * 1, results);
-
-        foreach(Collider2D col in results)
-        {
-            if(col ==null)
-            {
-                continue;
-            }
-
-            if(col.gameObject.CompareTag("Wall"))
-            {     
-        Debug.Log("Detect right");
-                releaseDir += Vector2.left * 1;
-            }
-        }
-        results[0] = null;
-        results[1] = null;
-        results[2] = null;
-        Physics2D.OverlapPointNonAlloc((Vector2)transform.position + Vector2.up * 1, results);
-
-        foreach(Collider2D col in results)
-        {
-            if(col ==null)
-            {
-                continue;
-            }
-
-            if(col.gameObject.CompareTag("Wall"))
-            {
-        Debug.Log("Detect up");
-                releaseDir += Vector2.down * 1;
-            }
-        }
-        results[0] = null;
-        results[1] = null;
-        results[2] = null;
-        Physics2D.OverlapPointNonAlloc((Vector2)transform.position + Vector2.down * 1, results);
-
-        foreach(Collider2D col in results)
-        {
-            if(col ==null)
-            {
-                continue;
-            }
-
-            if(col.gameObject.CompareTag("Wall"))
-            {
-        Debug.Log("Detect down");
-                releaseDir += Vector2.up * 1;
-            }
-        }
-        results[0] = null;
-        results[1] = null;
-        results[2] = null;
-        Debug.Log("Release Dir : " + releaseDir);
 
         rigidbody.AddForce(releaseDir * 500);
     }
@@ -216,7 +234,6 @@ public class Player : MonoBehaviour
         Physics2D.IgnoreCollision(this.BodyCollider, other.BodyCollider, true);
         yield return new WaitForSeconds(0.5f);
         Physics2D.IgnoreCollision(this.BodyCollider, other.BodyCollider, false);
-
     }
 
     bool WasHitStraighter(Player a, Player b)
@@ -232,26 +249,7 @@ public class Player : MonoBehaviour
         return aAngle >= bAngle;
     }
 
-    void Update()
-    {
 
-        if (state == States.ReadyToJump && StickDirection != Vector2.zero)
-        {
-            DrawGuideLine();
-        }
-        else
-        {
-            HideGuideLine();
-        }
-
-        Move();
-        ManageJump();
-        ManageGravity();
-
-
-
-        oldVelocity = rigidbody.velocity;
-    }
 
 
 
@@ -265,7 +263,7 @@ public class Player : MonoBehaviour
         if (!jumpGuide.DrawEnabled)
         {
             jumpGuide.DrawLine(transform.position, StickDirection * 100);
-            jumpGuideDirection = StickDirection;
+            jumpGuideDirection = StickDirection != Vector2.zero ? StickDirection : defaultStickDirection;
         }
 
         float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
@@ -279,9 +277,10 @@ public class Player : MonoBehaviour
         {
             endAngle *= -1;
         }
+
         float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * guideMoveSpeed);
         jumpGuideDirection = jumpGuideAngle.DegToVector();
-        jumpGuide.DrawLine(transform.position, jumpGuideDirection * 100);
+        jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * 10);
     }
 
     void ManageJump()
@@ -289,9 +288,13 @@ public class Player : MonoBehaviour
 
         if (jumpTime > 0.2f && (playerCollider.IsHoldingAnything || rigidbody.velocity.magnitude < jumpStopMagnitude))
         {
-            jumpTime = 0;
-            isJumping = false;
-            state = States.Walk;
+            CancelJump();
+        }
+
+        if (maxJumpDuration <= jumpTime)
+        {
+            CancelJump();
+            //rigidbody.velocity /= 2;
         }
 
         if (!isJumping && playerCollider.IsHoldingAnything)
@@ -319,11 +322,20 @@ public class Player : MonoBehaviour
             {
             }
             jumpTime += Time.deltaTime;
+            rigidbody.velocity *= jumpFraction;
             //Debug.Log(rigidbody.velocity.magnitude);
 
         }
     }
 
+    [SerializeField] float jumpFraction = 0.95f;
+
+    void CancelJump()
+    {
+        jumpTime = 0;
+        isJumping = false;
+        state = States.Walk;
+    }
 
     void ManageGravity()
     {
@@ -342,26 +354,92 @@ public class Player : MonoBehaviour
         }
     }
 
+    public static float FindDegree(Vector2 vec)
+    {
+        float value = (float)((Mathf.Atan2(vec.x, vec.y) / Mathf.PI) * 180f);
+        if (value < 0) value += 360f;
+
+        return value;
+    }
+
+    Vector2 CalcMoveVec(Vector2 input)
+    {
+
+        if (playerCollider.IsHoldingAnything)
+        {
+
+            Vector2 vec = Vector2.zero;
+            //currentMoveVec.x = Mathf.Abs(currentMoveVec.x);
+            //currentMoveVec.y = Mathf.Abs(currentMoveVec.y);
+
+            float wallAngle = Vector2.Angle(Vector2.up, currentMoveVec);
+            float dot = Vector2.Dot(Vector2.up, currentMoveVec);
+
+            //Debug.Log("dot : " + FindDegree( currentMoveVec));
+
+            float moveHorizontal = 45 <= wallAngle && wallAngle <= 135 ? input.x : 0;
+            float moveVertical = wallAngle < 45 || 135 < wallAngle ? input.y : 0;
+
+            //Debug.Log(moveHorizontal + ", " + moveVertical);
+            //if (FindDegree(currentMoveVec) >= 180)
+            //{
+            //    moveHorizontal *= -1;
+            //    moveVertical *= -1;
+            //}
+            if (currentMoveVec.x < 0)
+            {
+                moveHorizontal *= -1;
+            }
+
+            if (currentMoveVec.y < 0)
+            {
+                moveVertical *= -1;
+            }
+            //Debug.Log("movevec = " + currentMoveVec + ", " + wallAngle);
+
+            if (moveHorizontal != 0)
+            {
+                vec = currentMoveVec * moveHorizontal * walkSpeed * Time.deltaTime;
+            }
+
+            if (moveVertical != 0)
+            {
+                vec = currentMoveVec * moveVertical * walkSpeed * Time.deltaTime;
+                //Debug.Log(currentMoveVec + "," + vertical);
+            }
+
+            GameObject.Find("DebugText").GetComponent<Text>().text = "" + vec;
+            return vec;
+        }
+
+        return input * Vector2.right * walkSpeed * Time.deltaTime;
+
+    }
+
     void Move()
     {
         Vector2 vec = Vector2.zero;
-
+        Vector2 input = inputProvider.GetAxis();
         //Debug.Log(state);
         if (state == States.Walk)
         {
-            Vector2 input = inputProvider.GetAxis();
-            float horizontal = input.x;
-            float vertical = input.y;
 
-            float moveHorizontal = !playerCollider.isHoldingWall ? horizontal : 0;
-            float moveVertical = playerCollider.isHoldingWall ? vertical : 0;
-
-            vec = new Vector2(moveHorizontal, moveVertical);
-            vec.x = moveHorizontal * walkSpeed * Time.deltaTime;
-            vec.y = moveVertical * walkSpeed * Time.deltaTime;
+            vec = CalcMoveVec(input);
         }
-        else
+
+        if (state == States.Jump)
         {
+            float angleOffset = Vector2.Angle(currentMoveVec, Vector2.up);
+
+            Vector3 offsetInput = Quaternion.Euler(0, 0, angleOffset) * input;
+            Vector2 offsetNewInput = new Vector2(offsetInput.x * Mathf.Cos(0), offsetInput.y * Mathf.Sign(0));
+
+
+            //vec = input.normalized;
+            //vec = new Vector2(Mathf.Cos(input.x), Mathf.Sin(input.y)).normalized;
+            //vec = Quaternion.Euler(0, 0, -angleOffset) * offsetNewInput;
+            //vec *= Time.deltaTime * walkSpeedWhileJumping;
+            //vec += rigidbody.velocity;
         }
 
         if (vec != Vector2.zero)
@@ -373,20 +451,19 @@ public class Player : MonoBehaviour
         }
         else
         {
-            if (playerCollider.IsHoldingWall || state == States.ReadyToJump)
-
+            if (playerCollider.IsHoldingAnything || state == States.ReadyToJump)
             {
                 rigidbody.velocity *= 0.8f;
             }
             else if (state == States.Walk)
             {
-                rigidbody.velocity = new Vector2(rigidbody.velocity.x * 0.8f, rigidbody.velocity.y);
+                //rigidbody.velocity *= 0.8f;
+                //rigidbody.velocity = new Vector2(rigidbody.velocity.x * 0.8f, rigidbody.velocity.y);
             }
         }
     }
 
-
-
-
-
+    public void Damage(int damage)
+    {
+    }
 }

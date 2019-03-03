@@ -14,6 +14,18 @@ public class PlayerCollider : MonoBehaviour
         get { return hitOtherPlayerSubject; }
     }
 
+    Subject<Damageable> hitDamageableSubject = new Subject<Damageable>();
+    public IObservable<Damageable> OnHitDamageable
+    {
+        get { return hitDamageableSubject; }
+    }
+
+    Subject<Collision2D> stayWallSubject = new Subject<Collision2D>();
+    public IObservable<Collision2D> OnStayWall
+    {
+        get { return stayWallSubject; }
+    }
+
     //  壁つかまっているか判定
 
     List<GameObject> holdObjs = new List<GameObject>();
@@ -25,7 +37,8 @@ public class PlayerCollider : MonoBehaviour
 
     public bool IsHoldingWall
     {
-        get { return isHoldingCeiling || isHoldingWall; }
+        get { return holdingCount > 0;
+            }
     }
 
     public bool isHoldingWall { get; private set; }
@@ -96,6 +109,12 @@ public class PlayerCollider : MonoBehaviour
             //Debug.Log(wallType);
         }
 
+        Damageable d = collision.gameObject.GetComponent<Damageable>();
+        if(d != null)
+        {
+            hitDamageableSubject.OnNext(d);
+        }
+
         if (collision.gameObject.CompareTag("Player"))
         {
             hitOtherPlayerSubject.OnNext(collision.gameObject.GetComponent<Player>());
@@ -103,6 +122,14 @@ public class PlayerCollider : MonoBehaviour
 
     }
 
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+
+        if (collision.gameObject.CompareTag("Wall"))
+        {
+            stayWallSubject.OnNext(collision);
+        }
+    }
     private void OnCollisionExit2D(Collision2D collision)
     {
 

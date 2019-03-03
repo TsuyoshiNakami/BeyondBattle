@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\CameraMover.cs" />
+    <Compile Include="Assets\Damageable.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModuleAudio.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModulePhysics.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModulePhysics2D.cs" />
@@ -72,6 +73,7 @@
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenProShortcuts.cs" />
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenTextMeshPro.cs" />
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenTk2d.cs" />
+    <Compile Include="Assets\EnemyNoMove.cs" />
     <Compile Include="Assets\PlayerCollider.cs" />
     <Compile Include="Assets\Scripts\Extensions\Extensions_Math.cs" />
     <Compile Include="Assets\Scripts\Player\Player.cs" />
@@ -79,10 +81,28 @@
     <Compile Include="Assets\Scripts\Player\PlayerInputProvider.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerJumpGuide.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerStickInput.cs" />
+    <Compile Include="Assets\Scripts\System\ObjectFinder.cs" />
     <None Include="Assets\Demigiant\DOTweenPro\readme.txt" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Surface-Mobile.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMPro_Properties.cginc" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_Bitmap-Custom-Atlas.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
+    <None Include="Assets\TextMesh Pro\Sprites\EmojiOne Attribution.txt" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\Demigiant\DOTween\readme.txt" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_Bitmap-Mobile.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF Overlay.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMPro_Surface.cginc" />
     <None Include="Assets\Demigiant\DemiLib\Core\DemiLib.xml" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Mobile Overlay.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_Bitmap.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMPro.cginc" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Mobile.shader" />
     <None Include="Assets\Demigiant\readme_DOTweenPro.txt" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_Sprite.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Surface.shader" />
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
     </Reference>
@@ -299,15 +319,6 @@
     <Reference Include="UnityEngine.SpatialTracking">
       <HintPath>D:/Program Files/Unity/2018.3.6f1/Editor/Data/UnityExtensions/Unity/UnitySpatialTracking/RuntimeEditor/UnityEngine.SpatialTracking.dll</HintPath>
     </Reference>
-    <Reference Include="Unity.Analytics.Editor">
-      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Editor.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.Analytics.StandardEvents">
-      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.StandardEvents.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.Analytics.Tracker">
-      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Tracker.dll</HintPath>
-    </Reference>
     <Reference Include="DemiLib">
       <HintPath>D:/GameProjects/Unity/BeyondBattle/Assets/Demigiant/DemiLib/Core/DemiLib.dll</HintPath>
     </Reference>
@@ -316,6 +327,15 @@
     </Reference>
     <Reference Include="DOTweenPro">
       <HintPath>D:/GameProjects/Unity/BeyondBattle/Assets/Demigiant/DOTweenPro/DOTweenPro.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Analytics.Editor">
+      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Editor.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Analytics.StandardEvents">
+      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.StandardEvents.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Analytics.Tracker">
+      <HintPath>D:/GameProjects/Unity/BeyondBattle/Library/PackageCache/com.unity.analytics@3.2.2/Unity.Analytics.Tracker.dll</HintPath>
     </Reference>
     <Reference Include="netstandard">
       <HintPath>D:/Program Files/Unity/2018.3.6f1/Editor/Data/NetStandard/ref/2.0.0/netstandard.dll</HintPath>
