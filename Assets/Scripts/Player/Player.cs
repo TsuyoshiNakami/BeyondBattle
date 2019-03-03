@@ -103,6 +103,11 @@ public class Player : MonoBehaviour, Damageable
         {
             OnHitDamageable(damageable);
         });
+
+        playerCollider.OnTouchItem.Subscribe(item =>
+        {
+            OnTouchItem(item);
+        });
     }
 
 
@@ -130,6 +135,29 @@ public class Player : MonoBehaviour, Damageable
         oldVelocity = rigidbody.velocity;
     }
 
+
+    void OnTouchItem(IGettable item)
+    {
+        switch (state)
+        {
+            case States.Walk:
+                if (item.canWalkGet)
+                {
+                    item.OnGet();
+                }
+                break;
+            case States.ReadyToJump:
+                break;
+            case States.Jump:
+                if (item.canJumpGet)
+                {
+                    item.OnGet();
+                }
+                break;
+            default:
+                break;
+        }
+    }
 
     void OnStayWall(Collision2D col)
     {

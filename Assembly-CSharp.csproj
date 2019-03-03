@@ -60,8 +60,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\CameraMover.cs" />
-    <Compile Include="Assets\Damageable.cs" />
+    <Compile Include="Assets\CoinGenerator.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModuleAudio.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModulePhysics.cs" />
     <Compile Include="Assets\Demigiant\DOTween\Modules\DOTweenModulePhysics2D.cs" />
@@ -73,14 +72,18 @@
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenProShortcuts.cs" />
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenTextMeshPro.cs" />
     <Compile Include="Assets\Demigiant\DOTweenPro\DOTweenTk2d.cs" />
-    <Compile Include="Assets\EnemyNoMove.cs" />
-    <Compile Include="Assets\PlayerCollider.cs" />
+    <Compile Include="Assets\Scripts\Enemy\EnemyNoMove.cs" />
     <Compile Include="Assets\Scripts\Extensions\Extensions_Math.cs" />
+    <Compile Include="Assets\Scripts\Item\Coin.cs" />
+    <Compile Include="Assets\Scripts\Item\IGettable.cs" />
+    <Compile Include="Assets\Scripts\Object\Damageable.cs" />
     <Compile Include="Assets\Scripts\Player\Player.cs" />
+    <Compile Include="Assets\Scripts\Player\PlayerCollider.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerCPUInput.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerInputProvider.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerJumpGuide.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerStickInput.cs" />
+    <Compile Include="Assets\Scripts\System\CameraMover.cs" />
     <Compile Include="Assets\Scripts\System\ObjectFinder.cs" />
     <None Include="Assets\Demigiant\DOTweenPro\readme.txt" />
     <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Surface-Mobile.shader" />
