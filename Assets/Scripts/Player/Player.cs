@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UniRx;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 enum WallType
 {
-    Ground,
-    Wall,
-    Ceiling
+    None,
+    Normal,
+    Slip
 }
 public class Player : MonoBehaviour, Damageable
 {
@@ -28,7 +29,7 @@ public class Player : MonoBehaviour, Damageable
         get { return inputProvider.StickDirection; }
     }
 
-    Vector2 defaultStickDirection { get { return Vector2.up; } }
+    Vector2 DefaultStickDirection { get { return transform.up; } }
 
     // ジャンプ
     bool isJumping;
@@ -58,6 +59,8 @@ public class Player : MonoBehaviour, Damageable
 
     // 接触判定
     [SerializeField] PlayerCollider playerCollider;
+    WallType currentHoldingWallType;
+    float wallSlipValue = 1;
 
     // 入力
     [SerializeField] PlayerInputProvider inputProvider;
@@ -99,6 +102,11 @@ public class Player : MonoBehaviour, Damageable
             OnStayWall(col);
         });
 
+        playerCollider.OnStartHoldingWall.Subscribe(col =>
+        {
+            OnStartHoldingWall(col);
+        });
+
         playerCollider.OnHitDamageable.Subscribe(damageable =>
         {
             OnHitDamageable(damageable);
@@ -108,11 +116,22 @@ public class Player : MonoBehaviour, Damageable
         {
             OnTouchItem(item);
         });
+
+        playerCollider.OnUpdatePositionToWall.Subscribe(hit =>
+        {
+            transform.position = transform.position + (-transform.up * hit.distance  * Time.fixedDeltaTime);
+        });
     }
 
 
     void Update()
     {
+
+        if(Input.GetButtonDown("Home"))
+        {
+            Scene loadScene = SceneManager.GetActiveScene();
+            SceneManager.LoadScene(loadScene.name);
+        }
         if (playerCollider.IsHoldingAnything)
         {
         }
@@ -135,6 +154,18 @@ public class Player : MonoBehaviour, Damageable
         oldVelocity = rigidbody.velocity;
     }
 
+    void OnStartHoldingWall(Collision2D c)
+    {
+        SlipWall slipWall = c.gameObject.GetComponent<SlipWall>();
+        if (slipWall != null)
+        {
+            wallSlipValue = slipWall.gravityMultiplier;
+            currentHoldingWallType = WallType.Slip;
+            return;
+        }
+
+        currentHoldingWallType = WallType.Normal;
+    }
 
     void OnTouchItem(IGettable item)
     {
@@ -163,6 +194,11 @@ public class Player : MonoBehaviour, Damageable
     {
         Vector2 v = col.GetContact(0).normal;
         currentMoveVec = Quaternion.Euler(0, 0, -90) * v;
+
+
+        Quaternion q = Quaternion.FromToRotation(transform.up, col.GetContact(0).normal);
+        transform.rotation *= q;
+
     }
 
     void OnHitOtherPlayer(Player other)
@@ -184,7 +220,9 @@ public class Player : MonoBehaviour, Damageable
             {
                 Player a = this;
                 Player b = enemy;
+               
                 Vector2 hitVec = b.transform.position - a.transform.position;
+                NockBack(-hitVec * oldVelocity.magnitude);
                 enemy.NockBack(hitVec * oldVelocity.magnitude);
                 //    Destroy(collision.gameObject);
                 rigidbody.velocity = oldVelocity;
@@ -210,6 +248,7 @@ public class Player : MonoBehaviour, Damageable
                 ReleaseWall();
                 break;
             case States.ReadyToJump:
+                state = States.Walk;
                 break;
             case States.Jump:
                 rigidbody.AddForce(vec);
@@ -224,8 +263,6 @@ public class Player : MonoBehaviour, Damageable
     {
         Collider2D[] results = new Collider2D[3];
         Vector2 releaseDir = Vector2.zero;
-
-
 
         for (int i = 0; i < 4; i++)
         {
@@ -277,10 +314,6 @@ public class Player : MonoBehaviour, Damageable
         return aAngle >= bAngle;
     }
 
-
-
-
-
     void HideGuideLine()
     {
         jumpGuide.HideLine();
@@ -288,10 +321,11 @@ public class Player : MonoBehaviour, Damageable
 
     void DrawGuideLine()
     {
+        Debug.Log("Draw line");
         if (!jumpGuide.DrawEnabled)
         {
             jumpGuide.DrawLine(transform.position, StickDirection * 100);
-            jumpGuideDirection = StickDirection != Vector2.zero ? StickDirection : defaultStickDirection;
+            jumpGuideDirection = StickDirection != Vector2.zero ? StickDirection : (Vector2)transform.up;
         }
 
         float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
@@ -300,11 +334,24 @@ public class Player : MonoBehaviour, Damageable
             startAngle *= -1;
         }
 
-        float endAngle = Vector2.Angle(Vector2.right, StickDirection);
-        if (StickDirection.y < 0)
+        Vector2 dir = Vector2.zero;
+        float endAngle = 0;
+
+        if (StickDirection != Vector2.zero)
         {
-            endAngle *= -1;
+            dir = StickDirection;
+
         }
+        else
+        {
+            dir = DefaultStickDirection;
+
+        }
+            endAngle = Vector2.Angle(Vector2.right, dir);
+                    if (dir.y < 0)
+            {
+                endAngle *= -1;
+            }
 
         float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * guideMoveSpeed);
         jumpGuideDirection = jumpGuideAngle.DegToVector();
@@ -334,7 +381,7 @@ public class Player : MonoBehaviour, Damageable
             if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Up && state == States.ReadyToJump)
             {
                 state = States.Jump;
-                //Debug.Log("Jump");
+                Debug.Log("Jump" + jumpGuideDirection);
                 isJumping = true;
                 isJumpArmer = true;
                 jumpDirection = jumpGuideDirection.normalized;
@@ -370,7 +417,19 @@ public class Player : MonoBehaviour, Damageable
         //Debug.Log("holding wall : " + IsHoldingWall );
         if (playerCollider.IsHoldingWall)
         {
-            rigidbody.gravityScale = 0;
+            switch (currentHoldingWallType)
+            {
+                case WallType.None:
+                    break;
+                case WallType.Normal:
+                    rigidbody.gravityScale = 0;
+                    break;
+                case WallType.Slip:
+                    rigidbody.gravityScale = defaultGrabvityScale * wallSlipValue;
+                    break;
+                default:
+                    break;
+            }
         }
         else if (isJumping)
         {
@@ -451,8 +510,19 @@ public class Player : MonoBehaviour, Damageable
         //Debug.Log(state);
         if (state == States.Walk)
         {
-
             vec = CalcMoveVec(input);
+            switch (currentHoldingWallType)
+            {
+                case WallType.None:
+                    break;
+                case WallType.Normal:
+                    break;
+                case WallType.Slip:
+                    vec = Vector2.zero;
+                    break;
+                default:
+                    break;
+            }
         }
 
         if (state == States.Jump)

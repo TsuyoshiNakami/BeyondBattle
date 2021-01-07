@@ -20,6 +20,12 @@ public class PlayerCollider : MonoBehaviour
         get { return hitDamageableSubject; }
     }
 
+    Subject<Collision2D> startHoldingWallSubject = new Subject<Collision2D>();
+    public IObservable<Collision2D> OnStartHoldingWall
+    {
+        get { return startHoldingWallSubject; }
+    }
+
     Subject<Collision2D> stayWallSubject = new Subject<Collision2D>();
     public IObservable<Collision2D> OnStayWall
     {
@@ -30,6 +36,12 @@ public class PlayerCollider : MonoBehaviour
     public IObservable<IGettable> OnTouchItem
     {
         get { return touchItemSubject; }
+    }
+
+    Subject<RaycastHit2D> updatePositionToWallSubject = new Subject<RaycastHit2D>();
+    public IObservable<RaycastHit2D> OnUpdatePositionToWall
+    {
+        get { return updatePositionToWallSubject; }
     }
 
 
@@ -50,27 +62,27 @@ public class PlayerCollider : MonoBehaviour
 
     public bool isHoldingWall { get; private set; }
     public bool isHoldingCeiling { get; private set; }
-    WallType JudgeWhereHoldingOnTo(Vector2 normal)
-    {
-        if (Mathf.Abs(normal.x) < Mathf.Abs(normal.y))
-        {
-            //　上下方向にぶつかっている
-            if (normal.y < 0)
-            {
-                //天井
-                return WallType.Ceiling;
-            }
-            else
-            {
-                //地面
-                return WallType.Ground;
-            }
-        }
-        else
-        {
-            return WallType.Wall;
-        }
-    }
+    //WallType JudgeWhereHoldingOnTo(Vector2 normal)
+    //{
+    //    if (Mathf.Abs(normal.x) < Mathf.Abs(normal.y))
+    //    {
+    //        //　上下方向にぶつかっている
+    //        if (normal.y < 0)
+    //        {
+    //            //天井
+    //            return WallType.Ceiling;
+    //        }
+    //        else
+    //        {
+    //            //地面
+    //            return WallType.Ground;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        return WallType.Wall;
+    //    }
+    //}
     void ResetHoldingStates()
     {
         isHoldingWall = false;
@@ -96,26 +108,30 @@ public class PlayerCollider : MonoBehaviour
             isHoldingWall = false;
             holdingCount++;
 
-            WallType wallType = JudgeWhereHoldingOnTo(collision.GetContact(0).normal);
-            switch (wallType)
-            {
-                case WallType.Ground:
-                    break;
-                case WallType.Wall:
-                    isHoldingWall = true;
-                    break;
-                case WallType.Ceiling:
-                    isHoldingCeiling = true;
-                    break;
-                default:
-                    break;
-            }
-
+            //WallType wallType = JudgeWhereHoldingOnTo(collision.GetContact(0).normal);
+            //switch (wallType)
+            //{
+            //    case WallType.Ground:
+            //        break;
+            //    case WallType.Wall:
+            //        isHoldingWall = true;
+            //        break;
+            //    case WallType.Ceiling:
+            //        isHoldingCeiling = true;
+            //        break;
+            //    default:
+            //        break;
+            //}
+            startHoldingWallSubject.OnNext(collision);
             holdObjs.Add(collision.gameObject);
             //Debug.Log(collision.GetContact(0).normal);
             //Debug.Log(wallType);
         }
 
+        if(collision.gameObject.CompareTag("PlayerDeadZone"))
+        {
+            Destroy(gameObject);
+        }
         Damageable d = collision.gameObject.GetComponent<Damageable>();
         if(d != null)
         {
@@ -165,6 +181,16 @@ public class PlayerCollider : MonoBehaviour
         if (!JudgeHolding())
         {
             ResetHoldingStates();
+        }
+
+
+        int wallLayer = 1 << LayerMask.NameToLayer("Wall");
+
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, -transform.up, 5, wallLayer);
+
+        if (hit.collider != null)
+        {
+                updatePositionToWallSubject.OnNext(hit);
         }
     }
 }
