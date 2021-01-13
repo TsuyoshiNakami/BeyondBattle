@@ -12,12 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a31660d3b4ce3a45b317dcdcad93f39, type: 3}
   m_Name: PlayerStatusScriptable
   m_EditorClassIdentifier: 
-  jumpPower: 1000
+  jumpPower: 8000
   jumpingGravityScale: 0
-  guideMoveSpeed: 3
-  jumpStopMagnitude: 0.001
-  maxJumpDuration: 1.5
-  gravityMultiplier: 1.8
+  guideMoveSpeed: 12.16
+  jumpStopMagnitude: 3.07
+  maxJumpDuration: 1.96
+  gravityMultiplier: 3.57
   walkSpeed: 2000
   walkSpeedWhileJumping: 100
-  jumpFraction: 0.99
+  jumpFraction: 0.97
+  jumpStartInputMagnitude: 1
+  jumpEnableDuration: 0.01
+  moveInAir: 0.005

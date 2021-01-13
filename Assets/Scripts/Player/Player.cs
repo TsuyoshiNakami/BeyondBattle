@@ -29,6 +29,8 @@ public class Player : MonoBehaviour, Damageable
         get { return inputProvider.StickDirection; }
     }
 
+    Vector2 oldStickDirection;
+
     Vector2 DefaultStickDirection { get { return transform.up; } }
 
     // ジャンプ
@@ -64,6 +66,8 @@ public class Player : MonoBehaviour, Damageable
 
     // 入力
     [SerializeField] PlayerInputProvider inputProvider;
+    float stickMaxInputTime;
+
 
     // 移動
     Vector2 currentMoveVec;
@@ -83,7 +87,7 @@ public class Player : MonoBehaviour, Damageable
     {
         status = PlayerStatusScriptable.Entity;
         rigidbody = GetComponent<Rigidbody2D>();
-        defaultGrabvityScale =status.gravityMultiplier * rigidbody.gravityScale;
+        defaultGrabvityScale = status.gravityMultiplier * rigidbody.gravityScale;
         inputProvider = GetComponent<PlayerInputProvider>();
         cameraMover = ObjectFinder.GetCameraMover();
 
@@ -131,8 +135,15 @@ public class Player : MonoBehaviour, Damageable
 
     void Update()
     {
+        float inputLevel = Mathf.Max(Mathf.Abs( oldStickDirection.x),Mathf.Abs( oldStickDirection.y));
+        if (inputLevel >= status.jumpStartInputMagnitude)
+        {
+            stickMaxInputTime = 0;
+        }
 
-        GameObject.Find("DebugText").GetComponent<Text>().text = "" + rigidbody.gravityScale;
+        GameObject.Find("DebugText").GetComponent<Text>().text = "stickMaxInputTime : " + stickMaxInputTime
+                                                                +"\ninputLevel : " + inputLevel
+                                                                + "\nisJumping : " + isJumping;
         if (Input.GetButtonDown("Home"))
         {
             Scene loadScene = SceneManager.GetActiveScene();
@@ -158,6 +169,8 @@ public class Player : MonoBehaviour, Damageable
 
 
         oldVelocity = rigidbody.velocity;
+        oldStickDirection = StickDirection;
+        stickMaxInputTime += Time.deltaTime;
     }
 
     void OnStartHoldingWall(Collision2D c)
@@ -331,7 +344,7 @@ public class Player : MonoBehaviour, Damageable
         if (!jumpGuide.DrawEnabled)
         {
             jumpGuide.DrawLine(transform.position, StickDirection * 100);
-            jumpGuideDirection = StickDirection != Vector2.zero ? StickDirection : (Vector2)transform.up;
+            jumpGuideDirection = StickDirection != Vector2.zero ? -StickDirection : (Vector2)transform.up;
         }
 
         float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
@@ -345,7 +358,7 @@ public class Player : MonoBehaviour, Damageable
 
         if (StickDirection != Vector2.zero)
         {
-            dir = StickDirection;
+            dir = -StickDirection;
 
         }
         else
@@ -359,15 +372,14 @@ public class Player : MonoBehaviour, Damageable
             endAngle *= -1;
         }
 
-        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * status. guideMoveSpeed);
+        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * status.guideMoveSpeed);
         jumpGuideDirection = jumpGuideAngle.DegToVector();
         jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * 10);
     }
 
     void ManageJump()
     {
-
-        Debug.Log("magnitude : " + rigidbody.velocity.magnitude);
+        //Debug.Log("magnitude : " + rigidbody.velocity.magnitude);
         if (jumpTime > 0.2f)
         {
             if (playerCollider.IsHoldingAnything)
@@ -388,11 +400,34 @@ public class Player : MonoBehaviour, Damageable
 
         if (!isJumping && playerCollider.IsHoldingAnything)
         {
-            if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Down)
+            //playerCollider.OnUpdatePositionToWall
+            //　壁側にスティックを倒していたら
+
+            //if (false)
+            if (StickDirection == Vector2.zero)
             {
+
+                if (oldStickDirection != Vector2.zero &&
+                    status.jumpEnableDuration >= stickMaxInputTime)
+                {
+                    state = States.Jump;
+                    Debug.Log("Jump" + jumpGuideDirection);
+                    isJumping = true;
+                    isJumpArmer = true;
+                    jumpDirection = jumpGuideDirection.normalized;
+                    rigidbody.AddForce(jumpDirection * status.jumpPower);
+                    oldVelocity = rigidbody.velocity;
+                }
+            }
+            //if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Down)
+            {
+
                 state = States.ReadyToJump;
             }
-            if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Up && state == States.ReadyToJump)
+
+            // スティックを勢いよく戻したら
+            if (false)
+            //if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Up && state == States.ReadyToJump)
             {
                 state = States.Jump;
                 Debug.Log("Jump" + jumpGuideDirection);
@@ -411,7 +446,8 @@ public class Player : MonoBehaviour, Damageable
             {
             }
             jumpTime += Time.deltaTime;
-            rigidbody.velocity *= status.jumpFraction;
+            //rigidbody.velocity *= status.jumpFraction;
+            rigidbody.velocity = new Vector2(rigidbody.velocity.x, rigidbody.velocity.y * status.jumpFraction);
             //Debug.Log(rigidbody.velocity.magnitude);
 
         }
@@ -438,6 +474,7 @@ public class Player : MonoBehaviour, Damageable
                     break;
                 case WallType.Normal:
                     rigidbody.gravityScale = 0;
+                    rigidbody.velocity *= 0.8f;
                     break;
                 case WallType.Slip:
                     rigidbody.gravityScale = defaultGrabvityScale * wallSlipValue;
@@ -563,12 +600,12 @@ public class Player : MonoBehaviour, Damageable
             switch (state)
             {
                 case States.Walk:
-            rigidbody.velocity += new Vector2(vecX, vecY) * status.moveInAir;
+                    rigidbody.velocity += new Vector2(vecX, vecY) * status.moveInAir;
                     break;
                 case States.ReadyToJump:
                     break;
                 case States.Jump:
-            rigidbody.velocity += new Vector2(vecX, 0) * status.moveInAir;
+                    rigidbody.velocity += new Vector2(vecX, 0) * status.moveInAir;
                     break;
                 default:
                     break;

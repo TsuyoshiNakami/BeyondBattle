@@ -17,5 +17,7 @@ public class PlayerStatusScriptable : MyScriptable<PlayerStatusScriptable>
     [SerializeField] public float walkSpeedWhileJumping = 100;
 
     [SerializeField] public float jumpFraction = 0.99f;
+    public float jumpStartInputMagnitude;
+    public float jumpEnableDuration;
     public float moveInAir = 0.01f;
 }
