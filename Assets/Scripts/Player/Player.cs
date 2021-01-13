@@ -40,12 +40,12 @@ public class Player : MonoBehaviour, Damageable
 
 
     [SerializeField] PlayerJumpGuide jumpGuide;
-    [SerializeField] float jumpPower;
-    [SerializeField] float jumpingGravityScale;
-    [SerializeField] float guideMoveSpeed;
-    [SerializeField] float jumpStopMagnitude = 8;
-    [SerializeField] float maxJumpDuration = 0.5f;
-    [SerializeField] float gravityMultiplier = 1.5f;
+    //[SerializeField] float jumpPower;
+    //[SerializeField] float jumpingGravityScale;
+    //[SerializeField] float guideMoveSpeed;
+    //[SerializeField] float jumpStopMagnitude = 8;
+    //[SerializeField] float maxJumpDuration = 0.5f;
+    //[SerializeField] float gravityMultiplier = 1.5f;
 
     // 攻撃
     Vector2 oldVelocity;
@@ -67,8 +67,12 @@ public class Player : MonoBehaviour, Damageable
 
     // 移動
     Vector2 currentMoveVec;
-    [SerializeField] float walkSpeed;
-    [SerializeField] float walkSpeedWhileJumping;
+    //[SerializeField] float walkSpeed;
+    //[SerializeField] float walkSpeedWhileJumping;
+
+    //[SerializeField] float jumpFraction = 0.95f;
+
+    PlayerStatusScriptable status;
 
     Collider2D BodyCollider
     {
@@ -77,8 +81,9 @@ public class Player : MonoBehaviour, Damageable
 
     void Awake()
     {
+        status = PlayerStatusScriptable.Entity;
         rigidbody = GetComponent<Rigidbody2D>();
-        defaultGrabvityScale = gravityMultiplier * rigidbody.gravityScale;
+        defaultGrabvityScale =status.gravityMultiplier * rigidbody.gravityScale;
         inputProvider = GetComponent<PlayerInputProvider>();
         cameraMover = ObjectFinder.GetCameraMover();
 
@@ -119,7 +124,7 @@ public class Player : MonoBehaviour, Damageable
 
         playerCollider.OnUpdatePositionToWall.Subscribe(hit =>
         {
-            transform.position = transform.position + (-transform.up * hit.distance  * Time.fixedDeltaTime);
+            transform.position = transform.position + (-transform.up * hit.distance * Time.fixedDeltaTime);
         });
     }
 
@@ -127,7 +132,8 @@ public class Player : MonoBehaviour, Damageable
     void Update()
     {
 
-        if(Input.GetButtonDown("Home"))
+        GameObject.Find("DebugText").GetComponent<Text>().text = "" + rigidbody.gravityScale;
+        if (Input.GetButtonDown("Home"))
         {
             Scene loadScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(loadScene.name);
@@ -220,7 +226,7 @@ public class Player : MonoBehaviour, Damageable
             {
                 Player a = this;
                 Player b = enemy;
-               
+
                 Vector2 hitVec = b.transform.position - a.transform.position;
                 NockBack(-hitVec * oldVelocity.magnitude);
                 enemy.NockBack(hitVec * oldVelocity.magnitude);
@@ -347,13 +353,13 @@ public class Player : MonoBehaviour, Damageable
             dir = DefaultStickDirection;
 
         }
-            endAngle = Vector2.Angle(Vector2.right, dir);
-                    if (dir.y < 0)
-            {
-                endAngle *= -1;
-            }
+        endAngle = Vector2.Angle(Vector2.right, dir);
+        if (dir.y < 0)
+        {
+            endAngle *= -1;
+        }
 
-        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * guideMoveSpeed);
+        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * status. guideMoveSpeed);
         jumpGuideDirection = jumpGuideAngle.DegToVector();
         jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * 10);
     }
@@ -361,12 +367,20 @@ public class Player : MonoBehaviour, Damageable
     void ManageJump()
     {
 
-        if (jumpTime > 0.2f && (playerCollider.IsHoldingAnything || rigidbody.velocity.magnitude < jumpStopMagnitude))
+        Debug.Log("magnitude : " + rigidbody.velocity.magnitude);
+        if (jumpTime > 0.2f)
         {
-            CancelJump();
+            if (playerCollider.IsHoldingAnything)
+            {
+                CancelJump();
+            }
+            if (rigidbody.velocity.magnitude < status.jumpStopMagnitude)
+            {
+                CancelJump();
+            }
         }
 
-        if (maxJumpDuration <= jumpTime)
+        if (status.maxJumpDuration <= jumpTime)
         {
             CancelJump();
             //rigidbody.velocity /= 2;
@@ -385,7 +399,7 @@ public class Player : MonoBehaviour, Damageable
                 isJumping = true;
                 isJumpArmer = true;
                 jumpDirection = jumpGuideDirection.normalized;
-                rigidbody.AddForce(jumpDirection * jumpPower);
+                rigidbody.AddForce(jumpDirection * status.jumpPower);
                 oldVelocity = rigidbody.velocity;
                 //ResetHoldingStates();
             }
@@ -397,18 +411,19 @@ public class Player : MonoBehaviour, Damageable
             {
             }
             jumpTime += Time.deltaTime;
-            rigidbody.velocity *= jumpFraction;
+            rigidbody.velocity *= status.jumpFraction;
             //Debug.Log(rigidbody.velocity.magnitude);
 
         }
+
     }
 
-    [SerializeField] float jumpFraction = 0.95f;
 
     void CancelJump()
     {
         jumpTime = 0;
         isJumping = false;
+        //rigidbody.velocity = Vector2.zero;
         state = States.Walk;
     }
 
@@ -433,7 +448,7 @@ public class Player : MonoBehaviour, Damageable
         }
         else if (isJumping)
         {
-            rigidbody.gravityScale = jumpingGravityScale;
+            rigidbody.gravityScale = status.jumpingGravityScale;
         }
         else
         {
@@ -486,20 +501,20 @@ public class Player : MonoBehaviour, Damageable
 
             if (moveHorizontal != 0)
             {
-                vec = currentMoveVec * moveHorizontal * walkSpeed * Time.deltaTime;
+                vec = currentMoveVec * moveHorizontal * status.walkSpeed * Time.deltaTime;
             }
 
             if (moveVertical != 0)
             {
-                vec = currentMoveVec * moveVertical * walkSpeed * Time.deltaTime;
+                vec = currentMoveVec * moveVertical * status.walkSpeed * Time.deltaTime;
                 //Debug.Log(currentMoveVec + "," + vertical);
             }
 
-            GameObject.Find("DebugText").GetComponent<Text>().text = "" + vec;
+            //GameObject.Find("DebugText").GetComponent<Text>().text = "" + vec;
             return vec;
         }
 
-        return input * Vector2.right * walkSpeed * Time.deltaTime;
+        return input * Vector2.right * status.walkSpeed * Time.deltaTime;
 
     }
 
@@ -545,13 +560,26 @@ public class Player : MonoBehaviour, Damageable
             float vecX = vec.x != 0 ? vec.x : rigidbody.velocity.x;
             float vecY = vec.y != 0 ? vec.y : rigidbody.velocity.y;
 
-            rigidbody.velocity = new Vector2(vecX, vecY);
+            switch (state)
+            {
+                case States.Walk:
+            rigidbody.velocity += new Vector2(vecX, vecY) * status.moveInAir;
+                    break;
+                case States.ReadyToJump:
+                    break;
+                case States.Jump:
+            rigidbody.velocity += new Vector2(vecX, 0) * status.moveInAir;
+                    break;
+                default:
+                    break;
+            }
         }
         else
         {
             if (playerCollider.IsHoldingAnything || state == States.ReadyToJump)
             {
-                rigidbody.velocity *= 0.8f;
+                Debug.Log("AAA");
+                rigidbody.velocity *= 0.99f;
             }
             else if (state == States.Walk)
             {
