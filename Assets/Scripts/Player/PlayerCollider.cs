@@ -13,7 +13,11 @@ public class PlayerCollider : MonoBehaviour
     {
         get { return hitOtherPlayerSubject; }
     }
-
+    Subject<Unit> deadSubject = new Subject<Unit>();
+    public IObservable<Unit> OnDead
+    {
+        get { return deadSubject; }
+    }
     Subject<Damageable> hitDamageableSubject = new Subject<Damageable>();
     public IObservable<Damageable> OnHitDamageable
     {
@@ -130,7 +134,8 @@ public class PlayerCollider : MonoBehaviour
 
         if(collision.gameObject.CompareTag("PlayerDeadZone"))
         {
-            Destroy(gameObject);
+            deadSubject.OnNext(Unit.Default);
+            //Destroy(gameObject);
         }
         Damageable d = collision.gameObject.GetComponent<Damageable>();
         if(d != null)

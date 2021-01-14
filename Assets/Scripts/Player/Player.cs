@@ -18,6 +18,7 @@ public class Player : MonoBehaviour, Damageable
         Walk,
         ReadyToJump,
         Jump,
+        Air,
     }
 
     Rigidbody2D rigidbody;
@@ -67,16 +68,17 @@ public class Player : MonoBehaviour, Damageable
     // 入力
     [SerializeField] PlayerInputProvider inputProvider;
     float stickMaxInputTime;
-
+    float jumpChargeTime;
 
     // 移動
     Vector2 currentMoveVec;
+    Vector2 lastWallPos;
     //[SerializeField] float walkSpeed;
     //[SerializeField] float walkSpeedWhileJumping;
 
     //[SerializeField] float jumpFraction = 0.95f;
 
-    PlayerStatusScriptable status;
+    PlayerStatusScriptable param;
 
     Collider2D BodyCollider
     {
@@ -85,9 +87,9 @@ public class Player : MonoBehaviour, Damageable
 
     void Awake()
     {
-        status = PlayerStatusScriptable.Entity;
+        param = PlayerStatusScriptable.Entity;
         rigidbody = GetComponent<Rigidbody2D>();
-        defaultGrabvityScale = status.gravityMultiplier * rigidbody.gravityScale;
+        defaultGrabvityScale = param.gravityMultiplier * rigidbody.gravityScale;
         inputProvider = GetComponent<PlayerInputProvider>();
         cameraMover = ObjectFinder.GetCameraMover();
 
@@ -130,20 +132,28 @@ public class Player : MonoBehaviour, Damageable
         {
             transform.position = transform.position + (-transform.up * hit.distance * Time.fixedDeltaTime);
         });
+
+        playerCollider.OnDead.Subscribe(_ =>
+        {
+            state = States.Walk;
+            transform.position = lastWallPos;
+        });
     }
 
 
     void Update()
     {
-        float inputLevel = Mathf.Max(Mathf.Abs( oldStickDirection.x),Mathf.Abs( oldStickDirection.y));
-        if (inputLevel >= status.jumpStartInputMagnitude)
+        float inputLevel = Mathf.Max(Mathf.Abs(oldStickDirection.x), Mathf.Abs(oldStickDirection.y));
+        if (inputLevel >= param.jumpStartInputMagnitude)
         {
             stickMaxInputTime = 0;
         }
 
         GameObject.Find("DebugText").GetComponent<Text>().text = "stickMaxInputTime : " + stickMaxInputTime
-                                                                +"\ninputLevel : " + inputLevel
-                                                                + "\nisJumping : " + isJumping;
+                                                                + "\ninputLevel : " + inputLevel
+                                                                + "\nisJumping : " + isJumping
+                                                                + "\ngravity : " + rigidbody.gravityScale
+                                                                + "\nstate : " + state;
         if (Input.GetButtonDown("Home"))
         {
             Scene loadScene = SceneManager.GetActiveScene();
@@ -184,6 +194,8 @@ public class Player : MonoBehaviour, Damageable
         }
 
         currentHoldingWallType = WallType.Normal;
+        state = States.Walk;
+        lastWallPos = transform.position;
     }
 
     void OnTouchItem(IGettable item)
@@ -267,7 +279,7 @@ public class Player : MonoBehaviour, Damageable
                 ReleaseWall();
                 break;
             case States.ReadyToJump:
-                state = States.Walk;
+                state = States.Air;
                 break;
             case States.Jump:
                 rigidbody.AddForce(vec);
@@ -343,7 +355,7 @@ public class Player : MonoBehaviour, Damageable
         Debug.Log("Draw line");
         if (!jumpGuide.DrawEnabled)
         {
-            jumpGuide.DrawLine(transform.position, StickDirection * 100);
+            //jumpGuide.DrawLine(transform.position, StickDirection * lineLength);
             jumpGuideDirection = StickDirection != Vector2.zero ? -StickDirection : (Vector2)transform.up;
         }
 
@@ -371,10 +383,15 @@ public class Player : MonoBehaviour, Damageable
         {
             endAngle *= -1;
         }
+        float lineLength = 10;
+        if (jumpChargeTime < param.jumpChargeTimeMax)
+        {
+            lineLength = 5;
+        }
 
-        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * status.guideMoveSpeed);
+        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * param.guideMoveSpeed);
         jumpGuideDirection = jumpGuideAngle.DegToVector();
-        jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * 10);
+        jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * lineLength);
     }
 
     void ManageJump()
@@ -386,13 +403,13 @@ public class Player : MonoBehaviour, Damageable
             {
                 CancelJump();
             }
-            if (rigidbody.velocity.magnitude < status.jumpStopMagnitude)
+            if (rigidbody.velocity.magnitude < param.jumpStopMagnitude)
             {
                 CancelJump();
             }
         }
 
-        if (status.maxJumpDuration <= jumpTime)
+        if (param.maxJumpDuration <= jumpTime)
         {
             CancelJump();
             //rigidbody.velocity /= 2;
@@ -408,18 +425,13 @@ public class Player : MonoBehaviour, Damageable
             {
 
                 if (oldStickDirection != Vector2.zero &&
-                    status.jumpEnableDuration >= stickMaxInputTime)
+                    param.jumpEnableDuration >= stickMaxInputTime)
                 {
-                    state = States.Jump;
-                    Debug.Log("Jump" + jumpGuideDirection);
-                    isJumping = true;
-                    isJumpArmer = true;
-                    jumpDirection = jumpGuideDirection.normalized;
-                    rigidbody.AddForce(jumpDirection * status.jumpPower);
-                    oldVelocity = rigidbody.velocity;
+                    StartJump();
                 }
             }
             //if (inputProvider.GetButton(PlayerButton.Jump) == ButtonState.Down)
+            else
             {
 
                 state = States.ReadyToJump;
@@ -434,7 +446,7 @@ public class Player : MonoBehaviour, Damageable
                 isJumping = true;
                 isJumpArmer = true;
                 jumpDirection = jumpGuideDirection.normalized;
-                rigidbody.AddForce(jumpDirection * status.jumpPower);
+                rigidbody.AddForce(jumpDirection * param.maxJumpPower);
                 oldVelocity = rigidbody.velocity;
                 //ResetHoldingStates();
             }
@@ -446,21 +458,57 @@ public class Player : MonoBehaviour, Damageable
             {
             }
             jumpTime += Time.deltaTime;
-            //rigidbody.velocity *= status.jumpFraction;
-            rigidbody.velocity = new Vector2(rigidbody.velocity.x, rigidbody.velocity.y * status.jumpFraction);
+            rigidbody.velocity *= param.jumpFraction / 10000f;
+            //rigidbody.velocity = new Vector2(rigidbody.velocity.x, rigidbody.velocity.y * status.jumpFraction);
             //Debug.Log(rigidbody.velocity.magnitude);
 
         }
 
+
+        if (StickDirection != Vector2.zero &&
+            state == States.ReadyToJump)
+        {
+            ChargeJump();
+        }
+        else
+        {
+            jumpChargeTime = 0;
+        }
+
     }
 
+    void ChargeJump()
+    {
+        jumpChargeTime += Time.deltaTime;
+    }
+
+    void StartJump()
+    {
+        state = States.Jump;
+        Debug.Log("Jump" + jumpGuideDirection);
+        isJumping = true;
+        isJumpArmer = true;
+        jumpDirection = jumpGuideDirection.normalized;
+        if (jumpChargeTime >= param.jumpChargeTimeMax)
+        {
+            //rigidbody.AddForce(jumpDirection * param.maxJumpPower * 1000, ForceMode2D.Impulse);
+            rigidbody.velocity = jumpDirection * param.maxJumpPower * 1000;
+            Debug.Log("Jump Velocity : "+rigidbody.velocity.magnitude);
+        }
+        else
+        {
+            rigidbody.AddForce(jumpDirection * param.minJumpPower * 1000);
+        }
+        oldVelocity = rigidbody.velocity;
+        jumpChargeTime = 0;
+    }
 
     void CancelJump()
     {
         jumpTime = 0;
         isJumping = false;
         //rigidbody.velocity = Vector2.zero;
-        state = States.Walk;
+        state = States.Air;
     }
 
     void ManageGravity()
@@ -483,13 +531,26 @@ public class Player : MonoBehaviour, Damageable
                     break;
             }
         }
-        else if (isJumping)
-        {
-            rigidbody.gravityScale = status.jumpingGravityScale;
-        }
         else
         {
-            rigidbody.gravityScale = defaultGrabvityScale;
+            switch (state)
+            {
+                case States.Walk:
+                    rigidbody.gravityScale = defaultGrabvityScale;
+                    break;
+                case States.ReadyToJump:
+                    rigidbody.gravityScale = defaultGrabvityScale;
+                    break;
+                case States.Jump:
+                    rigidbody.gravityScale = param.jumpingGravityScale;
+                    break;
+                case States.Air:
+                    rigidbody.gravityScale = param.airGravityScale;
+                    break;
+                default:
+                    //rigidbody.gravityScale = defaultGrabvityScale;
+                    break;
+            }
         }
     }
 
@@ -538,12 +599,12 @@ public class Player : MonoBehaviour, Damageable
 
             if (moveHorizontal != 0)
             {
-                vec = currentMoveVec * moveHorizontal * status.walkSpeed * Time.deltaTime;
+                vec = currentMoveVec * moveHorizontal * param.walkSpeed * Time.deltaTime;
             }
 
             if (moveVertical != 0)
             {
-                vec = currentMoveVec * moveVertical * status.walkSpeed * Time.deltaTime;
+                vec = currentMoveVec * moveVertical * param.walkSpeed * Time.deltaTime;
                 //Debug.Log(currentMoveVec + "," + vertical);
             }
 
@@ -551,7 +612,7 @@ public class Player : MonoBehaviour, Damageable
             return vec;
         }
 
-        return input * Vector2.right * status.walkSpeed * Time.deltaTime;
+        return input * Vector2.right * param.walkSpeed * Time.deltaTime;
 
     }
 
@@ -594,18 +655,21 @@ public class Player : MonoBehaviour, Damageable
 
         if (vec != Vector2.zero)
         {
-            float vecX = vec.x != 0 ? vec.x : rigidbody.velocity.x;
-            float vecY = vec.y != 0 ? vec.y : rigidbody.velocity.y;
+            //float vecX = vec.x != 0 ? vec.x : rigidbody.velocity.x;
+            //float vecY = vec.y != 0 ? vec.y : rigidbody.velocity.y;
 
             switch (state)
             {
                 case States.Walk:
-                    rigidbody.velocity += new Vector2(vecX, vecY) * status.moveInAir;
+                    rigidbody.velocity += vec * param.moveInAir;
                     break;
                 case States.ReadyToJump:
                     break;
                 case States.Jump:
-                    rigidbody.velocity += new Vector2(vecX, 0) * status.moveInAir;
+                    rigidbody.velocity += new Vector2(vec.x, 0) * param.moveInAir;
+                    break;
+                case States.Air:
+                    rigidbody.velocity += new Vector2(vec.x, 0) * param.moveInAir;
                     break;
                 default:
                     break;
@@ -616,7 +680,7 @@ public class Player : MonoBehaviour, Damageable
             if (playerCollider.IsHoldingAnything || state == States.ReadyToJump)
             {
                 Debug.Log("AAA");
-                rigidbody.velocity *= 0.99f;
+                //rigidbody.velocity *= 0.99f;
             }
             else if (state == States.Walk)
             {

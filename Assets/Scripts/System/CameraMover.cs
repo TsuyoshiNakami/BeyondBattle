@@ -17,7 +17,7 @@ public class CameraMover : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
 
         Vector2 pos = Vector2.Lerp(oldPosition, followObj.transform.position, Time.deltaTime * lerpSpeed);
