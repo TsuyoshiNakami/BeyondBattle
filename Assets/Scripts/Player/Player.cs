@@ -66,7 +66,7 @@ public class Player : MonoBehaviour, Damageable
     float wallSlipValue = 1;
 
     // 入力
-    [SerializeField] PlayerInputProvider inputProvider;
+     PlayerInputProvider inputProvider;
     float stickMaxInputTime;
     float jumpChargeTime;
 
@@ -492,6 +492,7 @@ public class Player : MonoBehaviour, Damageable
         if (jumpChargeTime >= param.jumpChargeTimeMax)
         {
             //rigidbody.AddForce(jumpDirection * param.maxJumpPower * 1000, ForceMode2D.Impulse);
+            jumpDirection = Vector2.up;
             rigidbody.velocity = jumpDirection * param.maxJumpPower * 1000;
             Debug.Log("Jump Velocity : "+rigidbody.velocity.magnitude);
         }
@@ -679,7 +680,7 @@ public class Player : MonoBehaviour, Damageable
         {
             if (playerCollider.IsHoldingAnything || state == States.ReadyToJump)
             {
-                Debug.Log("AAA");
+
                 //rigidbody.velocity *= 0.99f;
             }
             else if (state == States.Walk)
