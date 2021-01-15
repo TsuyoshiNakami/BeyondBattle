@@ -401,7 +401,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d10a928fdb86dd47b0791e34df2da3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jumpPower: 10
+  playerCollider: {fileID: 1685806550}
   jumpGuide: {fileID: 1971034732}
 --- !u!95 &292834080
 Animator:
@@ -520,6 +520,11 @@ PrefabInstance:
       propertyPath: m_CollisionDetection
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3726820874730665998, guid: 5464ec16b0d38ac4ca090d9c50afef21,
+        type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 6200000, guid: 82b1565a9efd4e541b387a5fa7e2945c, type: 2}
     - target: {fileID: 3726820874730665999, guid: 5464ec16b0d38ac4ca090d9c50afef21,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -634,7 +639,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 437045485}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: cbdb8bd04be320f4899e01cd1f8e0555, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -794,7 +799,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 482337262}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: cbdb8bd04be320f4899e01cd1f8e0555, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1634,6 +1639,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1685806550 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2736704449827141289, guid: 5464ec16b0d38ac4ca090d9c50afef21,
+    type: 3}
+  m_PrefabInstance: {fileID: 340754371}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d6a87e8899d48a4faa84ea42fc8f659, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1714782383
 GameObject:
   m_ObjectHideFlags: 0
@@ -1675,7 +1692,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 1714782383}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: cbdb8bd04be320f4899e01cd1f8e0555, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
