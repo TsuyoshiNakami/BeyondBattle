@@ -96,6 +96,10 @@ public class JumpTestCharacter : MonoBehaviour
         {
             OnStartHoldingWall(col);
         });
+        playerCollider.OnStayWall.Subscribe(col =>
+        {
+            OnStayWall(col);
+        });
     }
 
     void ManageGravity()
@@ -128,6 +132,19 @@ public class JumpTestCharacter : MonoBehaviour
         state = States.Walk;
         lastWallPos = transform.position;
     }
+
+    void OnStayWall(Collision2D col)
+    {
+        //Vector2 v = col.GetContact(0).normal;
+        //currentMoveVec = Quaternion.Euler(0, 0, -90) * v;
+
+
+        //Quaternion q = Quaternion.FromToRotation(transform.up, col.GetContact(0).normal);
+        //transform.rotation *= q;
+        //state = States.Walk;
+    }
+
+
     void ManageAxisInput()
     {
 
@@ -174,9 +191,28 @@ public class JumpTestCharacter : MonoBehaviour
 
             jumpChargeTime += Time.deltaTime;
         }
+
+        if (state == States.Walk)
+        {
+            if (jumpChargeTime >= param.jumpChargeTimeMax)
+            {
+                GetComponentInChildren<SpriteRenderer>().color = Color.red;
+            }
+            else
+            {
+                var c = (new Color(1, 1, 0) * (1 - jumpChargeTime / param.jumpChargeTimeMax));
+                c.a = 1;
+                GetComponentInChildren<SpriteRenderer>().color = c;
+            }
+        }
+
         if (JumpRequired())
         {
             Jump();
+        }
+        if(state == States.Jump)
+        {
+            rigid.velocity = new Vector2(rigid.velocity.x * param.jumpFraction / 10000, rigid.velocity.y);
         }
     }
 
@@ -188,10 +224,12 @@ public class JumpTestCharacter : MonoBehaviour
         {
             rigid.velocity = jumpDirection * param.maxJumpPower;
 
+            GetComponentInChildren<SpriteRenderer>().color = Color.magenta;
         }
         else
         {
             rigid.velocity = jumpDirection * param.minJumpPower;
+            GetComponentInChildren<SpriteRenderer>().color = Color.yellow;
 
         }
 
@@ -200,6 +238,10 @@ public class JumpTestCharacter : MonoBehaviour
     }
     bool JumpRequired()
     {
+        if(state != States.Walk)
+        {
+            return false;
+        }
         if (StickDirection == Vector2.zero)
         {
             if (oldStickDirection != Vector2.zero)
@@ -207,6 +249,10 @@ public class JumpTestCharacter : MonoBehaviour
                 if (param.jumpEnableDuration >= afterStickMaxInputTime)
                 {
                     return true;
+                }
+                else
+                {
+                    jumpChargeTime = 0;
                 }
             }
         }

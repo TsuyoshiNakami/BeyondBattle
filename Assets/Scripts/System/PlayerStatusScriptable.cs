@@ -13,6 +13,12 @@ public class PlayerStatusScriptable : MyScriptable<PlayerStatusScriptable>
     [SerializeField] public float gravityMultiplier = 1.8f;
 
     [SerializeField] public float walkSpeed = 2000;
+    [Header("ジャンプ力")]
+    public float maxJumpHeight;
+    public float jumpSpeed;
+    public float jumpGravityUnit = 1;
+    public float jumpSpeedUnit = 9;
+
 
     [Header("ジャンプの減速")]
     [SerializeField] public float jumpingGravityScale = 0;
