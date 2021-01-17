@@ -61,7 +61,7 @@ public class JumpTestCharacter : MonoBehaviour
                 ManageAxisInput();
 
                 ShowDebugUI();
-                //bodyTransform.rotation = Quaternion.FromToRotation(Vector3.up, rigid.velocity);
+                bodyTransform.rotation = Quaternion.FromToRotation(Vector3.up, rigid.velocity);
 
                 if (state != States.ReadyToJump)
                 {
@@ -93,7 +93,7 @@ public class JumpTestCharacter : MonoBehaviour
         param = PlayerStatusScriptable.Entity;
         rigid = GetComponent<Rigidbody2D>();
         inputProvider = GetComponent<PlayerInputProvider>();
-
+        bodyTransform = transform.GetChild(0);
     }
 
     void SubscribeEvents()
@@ -117,7 +117,6 @@ public class JumpTestCharacter : MonoBehaviour
                 rigid.velocity = Vector2.zero;
                 break;
             case States.ReadyToJump:
-                rigid.gravityScale = defaultGravityScale;
                 break;
             case States.Jump:
                 rigid.gravityScale = param.jumpingGravityScale;
@@ -235,6 +234,8 @@ public class JumpTestCharacter : MonoBehaviour
 
     bool justJumped;
     private float wallAndPlayerAngle;
+    private float jumpingTime;
+    private Transform bodyTransform;
 
     void Jump()
     {
