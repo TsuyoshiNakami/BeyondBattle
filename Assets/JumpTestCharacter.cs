@@ -61,6 +61,12 @@ public class JumpTestCharacter : MonoBehaviour
                 ManageAxisInput();
 
                 ShowDebugUI();
+                //bodyTransform.rotation = Quaternion.FromToRotation(Vector3.up, rigid.velocity);
+
+                if (state != States.ReadyToJump)
+                {
+                    jumpGuide.HideLine();
+                }
             });
 
         Observable.EveryLateUpdate()
@@ -142,12 +148,20 @@ public class JumpTestCharacter : MonoBehaviour
         //Quaternion q = Quaternion.FromToRotation(transform.up, col.GetContact(0).normal);
         //transform.rotation *= q;
         //state = States.Walk;
+        if (jumpingTime >= 0.5f)
+        {
+            state = States.Walk;
+        }
     }
 
 
     void ManageAxisInput()
     {
 
+        if (justJumped)
+        {
+            return;
+        }
         float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
         if (jumpGuideDirection.y < 0)
         {
@@ -160,6 +174,7 @@ public class JumpTestCharacter : MonoBehaviour
         if (StickDirection != Vector2.zero)
         {
             dir = -StickDirection;
+            state = States.ReadyToJump;
 
         }
         else
@@ -192,7 +207,7 @@ public class JumpTestCharacter : MonoBehaviour
             jumpChargeTime += Time.deltaTime;
         }
 
-        if (state == States.Walk)
+        if (state == States.ReadyToJump)
         {
             if (jumpChargeTime >= param.jumpChargeTimeMax)
             {
@@ -210,14 +225,30 @@ public class JumpTestCharacter : MonoBehaviour
         {
             Jump();
         }
-        if(state == States.Jump)
+        if (state == States.Jump)
         {
             rigid.velocity = new Vector2(rigid.velocity.x * param.jumpFraction / 10000, rigid.velocity.y);
+
+            jumpingTime += Time.deltaTime;
         }
     }
 
+    bool justJumped;
+    private float wallAndPlayerAngle;
+
     void Jump()
     {
+        if (justJumped)
+        {
+            Debug.LogError("Multiple Jump required");
+        }
+        justJumped = true;
+        Observable.Timer(TimeSpan.FromSeconds(0.3f))
+            .Subscribe(_ =>
+            {
+                justJumped = false;
+            });
+
         state = States.Jump;
         jumpDirection = jumpGuideDirection.normalized;
         if (jumpChargeTime >= param.jumpChargeTimeMax)
@@ -233,12 +264,13 @@ public class JumpTestCharacter : MonoBehaviour
 
         }
 
+        jumpingTime = 0;
         jumpChargeTime = 0;
 
     }
     bool JumpRequired()
     {
-        if(state != States.Walk)
+        if (state != States.ReadyToJump)
         {
             return false;
         }
@@ -257,12 +289,6 @@ public class JumpTestCharacter : MonoBehaviour
             }
         }
         return false;
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
 
     }
 }
