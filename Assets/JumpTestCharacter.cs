@@ -63,9 +63,14 @@ public class JumpTestCharacter : MonoBehaviour
                 ShowDebugUI();
                 bodyTransform.rotation = Quaternion.FromToRotation(Vector3.up, rigid.velocity);
 
+
                 if (state != States.ReadyToJump)
                 {
                     jumpGuide.HideLine();
+                }
+                else
+                {
+                    DrawGuideLine();
                 }
             });
 
@@ -76,6 +81,54 @@ public class JumpTestCharacter : MonoBehaviour
 
                 afterStickMaxInputTime += Time.deltaTime;
             });
+    }
+
+    private void DrawGuideLine()
+    {
+        if (justJumped)
+        {
+            return;
+        }
+
+        if (!jumpGuide.DrawEnabled)
+        {
+            //jumpGuide.DrawLine(transform.position, StickDirection * lineLength);
+            jumpGuideDirection = StickDirection != Vector2.zero ? -StickDirection : (Vector2)transform.up;
+        }
+        float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
+        if (jumpGuideDirection.y < 0)
+        {
+            startAngle *= -1;
+        }
+
+        Vector2 dir = Vector2.zero;
+        float endAngle = 0;
+
+        if (StickDirection != Vector2.zero)
+        {
+            dir = -StickDirection;
+
+            //state = States.ReadyToJump;
+        }
+        else
+        {
+            dir = DefaultStickDirection;
+
+        }
+        endAngle = Vector2.Angle(Vector2.right, dir);
+        if (dir.y < 0)
+        {
+            endAngle *= -1;
+        }
+        float lineLength = 10;
+        if (jumpChargeTime < param.jumpChargeTimeMax)
+        {
+            lineLength = 5;
+        }
+
+        float jumpGuideAngle = Mathf.LerpAngle(startAngle, endAngle, Time.deltaTime * param.guideMoveSpeed);
+        jumpGuideDirection = jumpGuideAngle.DegToVector();
+        jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * lineLength);
     }
 
     private void ShowDebugUI()
@@ -105,6 +158,10 @@ public class JumpTestCharacter : MonoBehaviour
         playerCollider.OnStayWall.Subscribe(col =>
         {
             OnStayWall(col);
+        });
+        playerCollider.OnHitDamageable.Subscribe(damageable =>
+        {
+            OnHitDamageable(damageable);
         });
     }
 
@@ -161,6 +218,12 @@ public class JumpTestCharacter : MonoBehaviour
         {
             return;
         }
+        if (StickDirection != Vector2.zero)
+        {
+
+            state = States.ReadyToJump;
+        }
+        return;
         float startAngle = Vector2.Angle(Vector2.right, jumpGuideDirection);
         if (jumpGuideDirection.y < 0)
         {
@@ -190,7 +253,15 @@ public class JumpTestCharacter : MonoBehaviour
         jumpGuideDirection = jumpGuideAngle.DegToVector();
         jumpGuide.DrawLine(transform.position, (Vector2)transform.position + jumpGuideDirection * 10);
     }
-
+    void OnHitDamageable(Damageable damageable)
+    {
+        if (state == States.Jump)
+        {
+            CameraManager.Instance.shake.Shake(0);
+            //cameraMover.Shake(shakeStrength, shakeDur, shakeVibrato);
+            damageable.Damage(1);
+        }
+    }
     void ManageJump()
     {
 

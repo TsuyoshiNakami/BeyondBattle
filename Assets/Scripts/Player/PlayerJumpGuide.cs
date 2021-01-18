@@ -6,6 +6,7 @@ public class PlayerJumpGuide : MonoBehaviour
 {
     LineRenderer renderer;
 
+    [SerializeField] bool drawLine;
     public bool DrawEnabled
     {
         get { return renderer.enabled; }
@@ -24,6 +25,10 @@ public class PlayerJumpGuide : MonoBehaviour
     
     public void DrawLine(Vector2 start, Vector2 end)
     {
+        if(!drawLine)
+        {
+            return;
+        }
         renderer.enabled = true;
         renderer.SetPosition(0, start);
         renderer.SetPosition(1, end);
